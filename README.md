@@ -8,9 +8,22 @@
 4. 封装好的Publisher和Consumer
 
 ## 2. 用法
-### 2.1 队列的声明
 ```java
+/* 支持直接声明QUEUE和EXCHANGE（DIRECT, FANOUT, TOPIC） */
+
+// 例子1：对于EXCHANGE - TOPIC的用法
+// 1-1 exchange和队列声明
 new SimpleQueueBuilder().init(EndpointPropertiesWrapperFactory
 					.builder("testExchange-topic", "testQueue-topic-topic1", "topic")
 					.setExchangeType(StaticValue.EXCHANGETYPE.TOPIC));
+// 1-2 发布内容
+new SimpleProducer().publish(EndpointPropertiesWrapperFactory.producer("testExchange-topic", "topic")
+								.setExchangeType(StaticValue.EXCHANGETYPE.TOPIC),"testMessage:"+new Date());
+// 1-3 消费内容
+new SimpleConsumer().generateConsumer(EndpointPropertiesWrapperFactory.consumer("testQueue-topic-topic1"), SysoutConsumer.class, 2);
+
+// 例子2：直接声明队列使用
+new SimpleQueueBuilder().init(EndpointPropertiesWrapperFactory.builder("queue"));
+//.....其它请看代码
 ```
+
