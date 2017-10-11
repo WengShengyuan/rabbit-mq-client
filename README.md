@@ -1,5 +1,5 @@
 # rabbit-mq-client
-个人使用的Rabbit-mq的封装，用于不方便使用Spring-data-rabbit等方便的组件的场景，或者用于一些小型项目。te
+个人使用的Rabbit-mq的封装，用于不方便使用Spring-data-rabbit等方便的组件的场景，或者用于一些小型项目。
 
 ## 1. 特性
 1. 支持多host，随机切换
