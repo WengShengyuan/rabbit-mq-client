@@ -205,4 +205,17 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 	public PooledObject<Connection> wrap(Connection obj) {
 		return new DefaultPooledObject<Connection>(obj);
 	}
+	
+	
+    @Override
+    public void destroyObject(PooledObject<Connection> p)
+        throws Exception  {
+    	if(p.getObject().isOpen())
+    		p.getObject().close();
+    }
+    
+    @Override
+    public boolean validateObject(PooledObject<Connection> p){
+        return p.getObject().isOpen();
+    }
 }
