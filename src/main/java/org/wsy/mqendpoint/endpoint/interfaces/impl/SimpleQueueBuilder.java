@@ -2,13 +2,13 @@ package org.wsy.mqendpoint.endpoint.interfaces.impl;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 import org.wsy.mqendpoint.core.MqCore;
 import org.wsy.mqendpoint.core.StaticValue;
 import org.wsy.mqendpoint.endpoint.EndpointPropertiesWrapper;
 import org.wsy.mqendpoint.endpoint.interfaces.IQueueBuilder;
-
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
 
 public class SimpleQueueBuilder implements IQueueBuilder {
 	private static final Logger logger = LogManager.getLogger(SimpleQueueBuilder.class);

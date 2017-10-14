@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+
 import org.wsy.mqendpoint.endpoint.EndpointPropertiesWrapper;
 import org.wsy.mqendpoint.endpoint.interfaces.IConsumer;
 import org.wsy.mqendpoint.endpoint.interfaces.thread.AutoAckConsumerThread;

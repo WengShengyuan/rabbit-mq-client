@@ -5,10 +5,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.wsy.mqendpoint.core.MqCore;
-import org.wsy.mqendpoint.core.StaticValue;
-import org.wsy.mqendpoint.endpoint.EndpointPropertiesWrapper;
-import org.wsy.mqendpoint.endpoint.serialization.SimpleSerialization;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
@@ -16,6 +12,10 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import org.wsy.mqendpoint.core.MqCore;
+import org.wsy.mqendpoint.core.StaticValue;
+import org.wsy.mqendpoint.endpoint.EndpointPropertiesWrapper;
+import org.wsy.mqendpoint.endpoint.serialization.SimpleSerialization;
 
 /**
  * 自动consume并且发出ack信号的消费者线程实现<br>
@@ -44,15 +44,15 @@ public class AutoAckConsumerThread extends Thread {
 			if (!config.getEndPointType().equals(StaticValue.ENDPOINTTYPE.CONSUMER))
 				throw new Exception("wrong endpoint type, consumer only!");
 			if (config.getBindType().equals(StaticValue.BINDTYPE.QUEUE)) {
-				channel.queueDeclare(config.getQueueName(), config.isDurable(), config.isExclusive(),
-						config.isAutoDelete(), config.getArguments());
+//				channel.queueDeclare(config.getQueueName(), config.isDurable(), config.isExclusive(),
+//						config.isAutoDelete(), config.getArguments());
 				logger.debug("queue receive <- [" + config.getQueueName() + "]");
 			} else if (config.getBindType().equals(StaticValue.BINDTYPE.EXCHANGE)) {
-				channel.queueDeclare(config.getQueueName(), config.isDurable(), config.isExclusive(),
-						config.isAutoDelete(), config.getArguments());
-				channel.exchangeDeclare(config.getExchangeName(), config.getExchangeType(), config.isDurable(),
-						config.isAutoDelete(), config.getArguments());
-				channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
+//				channel.queueDeclare(config.getQueueName(), config.isDurable(), config.isExclusive(),
+//						config.isAutoDelete(), config.getArguments());
+//				channel.exchangeDeclare(config.getExchangeName(), config.getExchangeType(), config.isDurable(),
+//						config.isAutoDelete(), config.getArguments());
+//				channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
 				logger.debug("exchange receive <- [" + config.getExchangeName() + ", " + config.getExchangeType() + ", "
 						+ config.getRoutingKey() + "]");
 			} else {

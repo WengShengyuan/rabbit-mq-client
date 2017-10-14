@@ -127,7 +127,7 @@ public class TestCase {
 			new SimpleQueueBuilder().init(EndpointPropertiesWrapperFactory
 					.builder("testExchange-topic", "testQueue-topic-topic1", "topic")
 					.setExchangeType(StaticValue.EXCHANGETYPE.TOPIC));
-			
+			new SimpleQueueBuilder().init(EndpointPropertiesWrapperFactory.builder("queue"));
 		new Thread(new Runnable() {
 			
 			public void run() {
