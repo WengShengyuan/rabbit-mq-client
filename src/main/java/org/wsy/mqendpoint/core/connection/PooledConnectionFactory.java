@@ -1,4 +1,4 @@
-package org.wsy.mqendpoint.core;
+package org.wsy.mqendpoint.core.connection;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +17,7 @@ import com.rabbitmq.client.Recoverable;
 import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.wsy.mqendpoint.core.Config;
 
 public class PooledConnectionFactory extends BasePooledObjectFactory<Connection> {
 
@@ -27,8 +28,6 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 	private static String password = "";
 	private static boolean automaticRecovery = true;
 	private static long networkRecoveryInterval = 10000L;
-
-	private static Map<String, ConnectionFactory> factories;
 
 	public PooledConnectionFactory() {
 		logger.info("instance ChannelFactory ...");
@@ -67,7 +66,9 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 			for (String host : hostArray) {
 				registerFactory(host);
 			}
-			logger.info("ConnectionFactory map initialized. factories count:" + factories.keySet().size());
+			logger.info("ConnectionFactory map initialized. factories count:"
+					+ ConnectionFactoryManager.getInstance().getAllFactories().keySet().size() + ", available:"
+					+ ConnectionFactoryManager.getInstance().getAvailableFactories().keySet().size());
 		} else {
 			logger.warn("no ConnectionFactory initialized. hosts:" + hosts);
 		}
@@ -75,6 +76,7 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 
 	/**
 	 * 注册主机
+	 * 
 	 * @param hostPort
 	 */
 	private synchronized static void registerFactory(String hostPort) {
@@ -82,13 +84,6 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 			return;
 		if (!hostPort.contains(":"))
 			return;
-		if (factories == null) {
-			logger.info("initializing factories map...");
-			factories = new HashMap<String, ConnectionFactory>();
-		}
-		if (factories.containsKey(hostPort)) {
-			return;
-		}
 
 		String[] params = hostPort.split(":");
 		if (params.length != 2) {
@@ -103,44 +98,29 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 		factory.setNetworkRecoveryInterval(networkRecoveryInterval);
 		factory.setUsername(userName);
 		factory.setPassword(password);
-		factories.put(hostPort, factory);
+		ConnectionFactoryManager.getInstance().register(hostPort, factory);
 	}
 
-	private static synchronized void refreshFactories(){
-		logger.info("refreshing factories....");
-		String[] hostArray = hosts.split(",");
-		if (hostArray.length > 0) {
-			for (String host : hostArray) {
-				registerFactory(host);
-			}
-			logger.info("ConnectionFactory map initialized. factories count:" + factories.keySet().size());
-		} else {
-			logger.warn("no ConnectionFactory initialized. hosts:" + hosts);
-		}
-	}
-	
 	/**
 	 * 踢出主机
+	 * 
 	 * @param hostPort
 	 */
 	private static synchronized void kick(String hostPort) {
-		factories.remove(hostPort);
+		ConnectionFactoryManager.getInstance().kick(hostPort);
 	}
 
 	/**
 	 * 随机选择一个主机
+	 * 
 	 * @return
 	 */
 	private static synchronized ConnectionFactory pickOne() {
-		return factories.get(factories.keySet().toArray()[new Random().nextInt(factories.keySet().size())]);
+		return ConnectionFactoryManager.getInstance().pickOne();
 	}
 
 	@Override
 	public Connection create() throws Exception {
-		if(factories == null || factories.keySet().size()<1) {
-			logger.warn("no available factories, refreshing...");
-			refreshFactories();
-		}
 		ConnectionFactory factory = null;
 		Connection connection = null;
 		do {
@@ -148,12 +128,13 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 				factory = pickOne();
 				connection = factory.newConnection();
 			} catch (Exception e) {
-				logger.error("fail to create new connection from factory: [" + factory.getHost() + ":" + factory.getPort()
-						+ "], kicking this one out and retry...");
+				logger.error("fail to create new connection from factory: [" + factory.getHost() + ":"
+						+ factory.getPort() + "], kicking this one out and retry...");
 				kick(factory.getHost() + ":" + factory.getPort());
 			}
-		} while(connection == null && factories.keySet().size()>0);
-		if(connection == null) {
+		} while (connection == null
+				&& ConnectionFactoryManager.getInstance().getAvailableFactories().keySet().size() > 0);
+		if (connection == null) {
 			throw new Exception("fail to get new connection. no hosts left to use.");
 		}
 		/* ADD CONNECTION & CHANNEL CONNECTION LISTENER */
@@ -191,13 +172,8 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 			}
 		});
 		/* ADD CONNECTION & CHANNEL CONNECTION LISTENER */
-		logger.info("new connection was establesed...from host <- ["+factory.getHost()+":"+factory.getPort()+"]");
-		
-		if(factories.keySet().size() < hosts.split(",").length) {
-			logger.warn("found unavailable host, refreshing...");
-			refreshFactories();
-		}
-		
+		logger.info(
+				"new connection was establesed...from host <- [" + factory.getHost() + ":" + factory.getPort() + "]");
 		return connection;
 	}
 
@@ -205,17 +181,15 @@ public class PooledConnectionFactory extends BasePooledObjectFactory<Connection>
 	public PooledObject<Connection> wrap(Connection obj) {
 		return new DefaultPooledObject<Connection>(obj);
 	}
-	
-	
-    @Override
-    public void destroyObject(PooledObject<Connection> p)
-        throws Exception  {
-    	if(p.getObject().isOpen())
-    		p.getObject().close();
-    }
-    
-    @Override
-    public boolean validateObject(PooledObject<Connection> p){
-        return p.getObject().isOpen();
-    }
+
+	@Override
+	public void destroyObject(PooledObject<Connection> p) throws Exception {
+		if (p.getObject().isOpen())
+			p.getObject().close();
+	}
+
+	@Override
+	public boolean validateObject(PooledObject<Connection> p) {
+		return p.getObject().isOpen();
+	}
 }

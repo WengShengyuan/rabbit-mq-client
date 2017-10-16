@@ -1,8 +1,8 @@
 package org.wsy.mqendpoint.core;
 
-import java.io.IOException;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeoutException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
@@ -10,8 +10,9 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import org.wsy.mqendpoint.core.connection.ConnectionFacatoryDaemon;
+import org.wsy.mqendpoint.core.connection.PooledConnectionFactory;
 
 public class MqCore {
 
@@ -28,6 +29,8 @@ public class MqCore {
 	private static long timeBetweenEvictionRunsMillis = 10 * 60 * 1000;
 	private static boolean testWhileIdle = false;
 	private static boolean blockWhenExhausted = true;
+	private static int delay = 5000;
+	private static int interval = 60000;
 
 	public static MqCore getInstance() {
 		if (instance == null) {
@@ -92,10 +95,23 @@ public class MqCore {
 			logger.warn("fail to get [blockWhenExhausted] value of mq-endpoint.properties. set to default:"
 					+ blockWhenExhausted);
 		}
+		try {
+			logger.debug("reading properties [daemon delay] ...");
+			delay = Integer.valueOf(Config.get("mq.daemon.delay"));
+		} catch (Exception e) {
+			logger.warn("fail to get [daemon delay] value of mq-endpoint.properties. set to default:" + delay);
+		}
+		try {
+			logger.debug("reading properties [daemon interval] ...");
+			interval = Integer.valueOf(Config.get("mq.daemon.interval"));
+		} catch (Exception e) {
+			logger.warn("fail to get [daemon interval] value of mq-endpoint.properties. set to default:" + interval);
+		}
+
 		logger.debug("ChannelPool config: [maxActive: " + maxActive + ",maxWait: " + maxWait + ",maxIdle: " + maxIdle
 				+ ",minIdle: " + minIdle + ",testOnBorrow: " + testOnBorrow + ",timeBetweenEvictionRunsMillis: "
 				+ timeBetweenEvictionRunsMillis + ",testWhileIdle: " + testWhileIdle + ",blockWhenExhausted: "
-				+ blockWhenExhausted + "]");
+				+ blockWhenExhausted + ",daemon delay: "+delay+", daemon interval: "+interval+"]");
 		poolConfig.setMaxIdle(maxIdle);
 		poolConfig.setMinIdle(minIdle);
 		poolConfig.setMaxWaitMillis(maxWait);
@@ -104,7 +120,12 @@ public class MqCore {
 		poolConfig.setTestWhileIdle(testWhileIdle);
 		poolConfig.setBlockWhenExhausted(blockWhenExhausted);
 		pool = new GenericObjectPool<Connection>(new PooledConnectionFactory(), poolConfig);
-		logger.debug("ChannelPool initialized.");
+		logger.debug("ChannelPool initialized, start factory daemon...");
+		// start daemon task
+		TimerTask daemonTask = new ConnectionFacatoryDaemon();
+		Timer timer = new Timer(true);
+		timer.schedule(daemonTask, delay, interval);
+		logger.debug("factory daemon on.");
 	}
 
 	public Connection borrowObject() throws NoSuchElementException, IllegalStateException, Exception {
@@ -114,8 +135,8 @@ public class MqCore {
 	public void returnObject(Connection connection) throws Exception {
 		pool.returnObject(connection);
 	}
-	
-	public void poolCheck(){
-		logger.info("ChannelPool status: [active: "+pool.getNumActive()+", idle: "+pool.getNumIdle()+"]");
-	} 
+
+	public void poolCheck() {
+		logger.info("ChannelPool status: [active: " + pool.getNumActive() + ", idle: " + pool.getNumIdle() + "]");
+	}
 }
